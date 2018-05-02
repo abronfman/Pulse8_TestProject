@@ -10,34 +10,38 @@ Alter procedure dbo.member_getDiagnosisAndSeverity (
 )
 AS
 BEGIN
-	;WITH MostSevereMemberDiagnosis as (
-		Select MemberId, MIN(DiagnosisID) as LowestDiagnosisID
-		from MemberDiagnosis
-		Group By MemberID
-	) 
-	Select m.MemberID,
-		m.FirstName,
-		m.LastName,
-		severity.LowestDiagnosisID as MostSevereDiagnosisID,
-		d.DiagnosisDescription as MostSevereDiagnosisDescription,
-		cat.DiagnosisCategoryID as CategoryID,
-		cat.CategoryDescription,
-		cat.CategoryScore,
+	
+Select m.MemberID, 
+	m.FirstName, 
+	m.LastName, 
+	min(md.DiagnosisID) as MostSevereDiagnosisID,
+	(	
+		Select Diagnosis.DiagnosisDescription 
+		from Diagnosis 
+		where Diagnosis.DiagnosisID = min(md.DiagnosisId)
+	) as MostSevereDiagnosisDescription, 
+	map.DiagnosisCategoryID as CategoryID,
+	cat.CategoryDescription,
+	cat.CategoryScore,
 		case 
-			when severity.LowestDiagnosisID is not null 
-				then 1
-			when severity.LowestDiagnosisID is null AND cat.DiagnosisCategoryID is null	
-				then 1
+			when severity.mostSevereCategory is not null then 1
+			when severity.mostSevereCategory is null AND map.DiagnosisCategoryID is null then 1
 			else 0
-		end as IsMostSevereCategory
-	From Member m
-		left outer join MemberDiagnosis md on m.MemberID = md.MemberID
-		left outer join DiagnosisCategoryMap map on map.DiagnosisID = md.DiagnosisID
-		left outer join DiagnosisCategory cat on map.DiagnosisCategoryID = cat.DiagnosisCategoryID
-		left outer join MostSevereMemberDiagnosis severity on m.MemberID = severity.MemberID
-			and md.DiagnosisID = severity.LowestDiagnosisID
-		left outer join Diagnosis d on severity.LowestDiagnosisID = d.DiagnosisID
-	Where m.MemberID = @MemberId
-	Order by m.MemberID
+		end as IsMostSevere
+from Member m
+left outer join MemberDiagnosis md on m.MemberID= md.MemberID
+left outer join DiagnosisCategoryMap map on md.DiagnosisID = map.DiagnosisID
+left outer join DiagnosisCategory cat on map.DiagnosisCategoryID = cat.DiagnosisCategoryID
+left outer join (
+	select m.MemberID, min(map.DiagnosisCategoryID) mostSevereCategory
+	from MemberDiagnosis m
+	join DiagnosisCategoryMap map on m.DiagnosisID = map.DiagnosisID
+	group by m.MemberID
+) as severity 
+	on m.MemberID = severity.MemberID	
+		AND cat.DiagnosisCategoryID = severity.mostSevereCategory
+Where m.MemberID = @MemberId
+group by m.MemberID,m.FirstName, m.LastName, map.DiagnosisCategoryID, 
+	cat.CategoryDescription, cat.CategoryScore, severity.mostSevereCategory
 END 
 GO
