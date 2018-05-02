@@ -85,7 +85,7 @@ namespace Pulse8_ProgrammingTest.DataAccess {
                                 DiagnosisCategoryId = SmartConvert.ToInt(reader["CategoryID"]),
                                 DiagnosisCategoryDescription = reader["CategoryDescription"].ToString(),
                                 DiagnosisCategoryScore = SmartConvert.ToInt(reader["CategoryScore"]),
-                                IsMostSevere = SmartConvert.ToBool(reader["IsMostSevereCategory"])
+                                IsMostSevere = SmartConvert.ToBool(reader["IsMostSevere"])
                             };
                             resultSet.Add(diagnosis);
                         }
